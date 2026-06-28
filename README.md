@@ -56,3 +56,4 @@ TaskMaster is a modern, production-ready SaaS task management platform built wit
 - **Primary Color**: Indigo (`#6366F1`)
 - **Secondary**: Purple (`#8B5CF6`)
 - **Status/Priority Mapping**: Contextual gradient badges mapped precisely to task conditions.
+"# Task-Tracker" 
