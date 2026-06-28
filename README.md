@@ -72,20 +72,43 @@ npm run dev
 
 ## 📁 Project Structure
 
-```text
-Task-Tracker
-├── client
-│   ├── src
-│   ├── components
-│   ├── pages
-│   └── services
-│
-├── server
-│   ├── controllers
-│   ├── models
-│   ├── routes
-│   ├── middlewares
-│   └── config
 ```
+Task-Tracker/
+│
+├── client/
+│   ├── public/
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── store/
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   ├── App.css
+│   │   └── index.css
+│   │
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   └── .env.example
+│
+├── server/
+│   ├── config/
+│   ├── controllers/
+│   ├── middlewares/
+│   ├── models/
+│   ├── routes/
+│   ├── server.js
+│   ├── package.json
+│   └── .env.example
+│
+├── .gitignore
+├── README.md
+└── package-lock.json
+```
+
+
 
 
