@@ -191,9 +191,40 @@ exports.getAnalytics = async (req, res) => {
        };
     });
 
+    const heatmapAgg = await Task.aggregate([
+      { $match: { user: userId } },
+      { $project: {
+          day: { $subtract: [{ $dayOfWeek: "$createdAt" }, 1] }, // 0 (Sun) to 6 (Sat)
+          hourRaw: { $hour: "$createdAt" }
+      }},
+      { $project: {
+          day: 1,
+          // Map 24h to 12 slots (e.g., 0-1 -> 0 (8a equivalent), we can just do Math.floor(hour / 2))
+          // Actually, hours on frontend are ['8a', '10a', '12p', '2p', '4p', '6p', '8p'] which is 7 slots.
+          // Let's just group by hour directly, and frontend can map it, or map here.
+          hour: 1
+      }},
+      { $group: {
+          _id: { day: "$day", hour: "$hourRaw" },
+          count: { $sum: 1 }
+      }}
+    ]);
+
+    const heatmap = [];
+    for (let day = 0; day < 7; day++) {
+      for (let hour = 0; hour < 12; hour++) {
+        // Find if we have tasks in this block (0-24 mapped to 0-11 by dividing by 2)
+        const match = heatmapAgg.filter(h => h._id.day === day && Math.floor(h._id.hour / 2) === hour);
+        const count = match.reduce((acc, curr) => acc + curr.count, 0);
+        // Calculate a value between 0-100 based on relative count, but let's just make it count * 20 for now
+        heatmap.push({ day, hour, value: Math.min(100, count * 25) });
+      }
+    }
+
     res.status(200).json({
       stats: stats[0] || { total:0, completed:0, inProgress:0, pending:0, highPriority:0, urgentPriority:0, overdue:0 },
-      weekly: formattedWeekly
+      weekly: formattedWeekly,
+      heatmap
     });
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });

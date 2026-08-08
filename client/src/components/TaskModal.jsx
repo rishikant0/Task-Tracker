@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
-import { FiX, FiSave, FiMessageSquare, FiPaperclip, FiActivity, FiCalendar, FiClock } from 'react-icons/fi';
+import { X, Save, MessageSquare, Paperclip, Activity, Calendar, Clock, CheckCircle2, ChevronRight, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import useModalStore from '../store/useModalStore';
 import { createTask, updateTask } from '../services/api';
@@ -9,6 +9,7 @@ import { createTask, updateTask } from '../services/api';
 const TaskModal = ({ onTaskSaved }) => {
   const { isOpen, task, closeModal } = useModalStore();
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const [activeTab, setActiveTab] = useState('details');
 
   useEffect(() => {
     if (task) {
@@ -16,6 +17,7 @@ const TaskModal = ({ onTaskSaved }) => {
         ...task,
         dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''
       });
+      setActiveTab('details');
     } else {
       reset({
         title: '',
@@ -26,10 +28,11 @@ const TaskModal = ({ onTaskSaved }) => {
         estimatedTime: 0,
         comments: []
       });
+      setActiveTab('details');
     }
   }, [task, isOpen, reset]);
 
-  const [newComment, setNewComment] = React.useState('');
+  const [newComment, setNewComment] = useState('');
 
   const onSubmit = async (data) => {
     try {
@@ -55,135 +58,206 @@ const TaskModal = ({ onTaskSaved }) => {
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeModal}
-            className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm"
+            className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm"
           />
+          
+          {/* Right Drawer */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 pointer-events-none"
+            initial={{ x: '100%', opacity: 0.5 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0.5 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col"
           >
-            <div className="glass-card w-full max-w-2xl max-h-full overflow-y-auto pointer-events-auto flex flex-col">
-              <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700/50 sticky top-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl z-10">
-                <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-                  {task ? 'Edit Task' : 'Create New Task'}
-                </h2>
-                <button onClick={closeModal} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
-                  <FiX size={20} />
-                </button>
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                  <CheckCircle2 size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">
+                    {task ? 'Edit Task' : 'New Task'}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {task ? 'Update task details' : 'Create a new item'}
+                  </p>
+                </div>
               </div>
+              <button 
+                onClick={closeModal} 
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Title</label>
-                  <input
-                    type="text"
-                    className={`input-field ${errors.title ? 'border-red-500' : ''}`}
-                    placeholder="Task title"
-                    {...register('title', { required: 'Title is required', minLength: 3 })}
-                  />
-                  {errors.title && <p className="mt-1 text-sm text-red-500">Title is required (min 3 chars)</p>}
+            {/* Content Area */}
+            <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col h-full overflow-hidden">
+              
+              {/* Tabs */}
+              {task && (
+                <div className="flex px-6 pt-4 gap-6 border-b border-slate-200 dark:border-slate-800 shrink-0">
+                  <button 
+                    type="button" 
+                    onClick={() => setActiveTab('details')}
+                    className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
+                      activeTab === 'details' 
+                        ? 'border-indigo-600 text-indigo-600' 
+                        : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    Details
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setActiveTab('comments')}
+                    className={`pb-3 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
+                      activeTab === 'comments' 
+                        ? 'border-indigo-600 text-indigo-600' 
+                        : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    Activity
+                    {task.comments?.length > 0 && (
+                      <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px]">{task.comments.length}</span>
+                    )}
+                  </button>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
-                  <textarea
-                    rows="4"
-                    className={`input-field resize-none ${errors.description ? 'border-red-500' : ''}`}
-                    placeholder="Add more details..."
-                    {...register('description', { required: 'Description is required' })}
-                  ></textarea>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
-                    <select className="input-field" {...register('status')}>
-                      <option value="Pending">Pending</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Completed">Completed</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Priority</label>
-                    <select className="input-field" {...register('priority')}>
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                      <option value="Urgent">Urgent</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Due Date</label>
-                    <input type="date" className="input-field" {...register('dueDate')} />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
-                    <select className="input-field" {...register('category')}>
-                      <option value="Work">Work</option>
-                      <option value="Personal">Personal</option>
-                      <option value="Study">Study</option>
-                      <option value="Shopping">Shopping</option>
-                      <option value="Fitness">Fitness</option>
-                    </select>
-                  </div>
-                </div>
-
-                {task && (
-                  <div className="pt-6 border-t border-slate-200 dark:border-slate-700/50 space-y-6">
-                    <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-                      <span className="flex items-center gap-1"><FiCalendar /> Created: {new Date(task.createdAt).toLocaleDateString()}</span>
-                      <span className="flex items-center gap-1"><FiClock /> Updated: {new Date(task.updatedAt).toLocaleDateString()}</span>
+              {/* Scrollable Form Content */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                
+                {activeTab === 'details' && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">Task Title</label>
+                      <input
+                        type="text"
+                        className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border ${errors.title ? 'border-rose-500' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder:text-slate-400`}
+                        placeholder="e.g. Design new landing page"
+                        {...register('title', { required: 'Title is required', minLength: 3 })}
+                      />
+                      {errors.title && <p className="mt-1.5 text-xs font-medium text-rose-500">{errors.title.message}</p>}
                     </div>
 
                     <div>
-                      <h4 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-3"><FiMessageSquare /> Comments</h4>
-                      <div className="space-y-3 mb-3 max-h-40 overflow-y-auto pr-2">
-                        {task.comments?.length > 0 ? task.comments.map((c, i) => (
-                          <div key={i} className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg text-sm text-slate-700 dark:text-slate-300">
-                            {c.text}
-                          </div>
-                        )) : <p className="text-xs text-slate-500">No comments yet.</p>}
+                      <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                        <FileText size={16} className="text-slate-400" /> Description
+                      </label>
+                      <textarea
+                        rows="4"
+                        className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border ${errors.description ? 'border-rose-500' : 'border-slate-200 dark:border-slate-700'} rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all placeholder:text-slate-400 resize-none`}
+                        placeholder="Add more context or acceptance criteria..."
+                        {...register('description', { required: 'Description is required' })}
+                      ></textarea>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Status</label>
+                        <select className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all appearance-none" {...register('status')}>
+                          <option value="Pending">Todo</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Completed">Completed</option>
+                        </select>
                       </div>
-                      <input 
-                        type="text" 
-                        value={newComment} 
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Add a comment... (will be saved when you update task)" 
-                        className="input-field text-sm"
-                      />
+                      
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Priority</label>
+                        <select className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all appearance-none" {...register('priority')}>
+                          <option value="Low">Low</option>
+                          <option value="Medium">Medium</option>
+                          <option value="High">High</option>
+                          <option value="Urgent">Urgent</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Due Date</label>
+                        <input type="date" className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all text-slate-700 dark:text-slate-200" {...register('dueDate')} />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Category</label>
+                        <select className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all appearance-none" {...register('category')}>
+                          <option value="Work">Work</option>
+                          <option value="Personal">Personal</option>
+                          <option value="Study">Study</option>
+                          <option value="Shopping">Shopping</option>
+                          <option value="Fitness">Fitness</option>
+                        </select>
+                      </div>
                     </div>
-                    
-                    <div className="flex gap-4 border-t border-slate-200 dark:border-slate-700/50 pt-4">
-                      <button type="button" disabled className="text-sm text-slate-500 hover:text-indigo-600 flex items-center gap-2 opacity-50 cursor-not-allowed" title="Coming soon">
-                        <FiPaperclip /> Attachments
-                      </button>
-                      <button type="button" disabled className="text-sm text-slate-500 hover:text-indigo-600 flex items-center gap-2 opacity-50 cursor-not-allowed" title="Coming soon">
-                        <FiActivity /> Activity History
-                      </button>
-                    </div>
-                  </div>
+                  </motion.div>
                 )}
 
-                <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700/50">
-                  <button type="button" onClick={closeModal} className="btn btn-secondary">
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    <FiSave className="mr-2" />
-                    {task ? 'Save Changes' : 'Create Task'}
-                  </button>
-                </div>
-              </form>
-            </div>
+                {activeTab === 'comments' && task && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 flex flex-col h-full">
+                    <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-500 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/50">
+                      <span className="flex items-center gap-1.5"><Calendar size={14} /> Created: {new Date(task.createdAt).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1.5"><Clock size={14} /> Updated: {new Date(task.updatedAt).toLocaleDateString()}</span>
+                    </div>
+
+                    <div className="flex-1 flex flex-col min-h-0">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+                        <MessageSquare size={16} className="text-indigo-600" /> Conversation
+                      </h4>
+                      
+                      <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2">
+                        {task.comments?.length > 0 ? task.comments.map((c, i) => (
+                          <div key={i} className="flex gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 shrink-0 flex items-center justify-center text-white text-xs font-bold">
+                              U
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-800/80 p-3.5 rounded-2xl rounded-tl-sm border border-slate-100 dark:border-slate-700/50 text-sm text-slate-700 dark:text-slate-300 shadow-sm w-full">
+                              {c.text}
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="h-full flex flex-col items-center justify-center text-slate-400 py-10">
+                            <MessageSquare size={32} className="mb-2 opacity-50" />
+                            <p className="text-sm font-medium">No comments yet</p>
+                            <p className="text-xs">Start the conversation below.</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="relative mt-auto">
+                        <input 
+                          type="text" 
+                          value={newComment} 
+                          onChange={(e) => setNewComment(e.target.value)}
+                          placeholder="Write a comment..." 
+                          className="w-full pl-4 pr-12 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none shadow-sm"
+                        />
+                        <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0 flex justify-end gap-3">
+                <button type="button" onClick={closeModal} className="px-5 py-2.5 rounded-xl font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-indigo-500/30 transition-all">
+                  <Save size={18} />
+                  {task ? 'Save Changes' : 'Create Task'}
+                </button>
+              </div>
+            </form>
           </motion.div>
         </>
       )}

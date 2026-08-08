@@ -2,11 +2,6 @@ const mongoose = require('mongoose');
 
 const taskSchema = mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      ref: 'User',
-    },
     title: {
       type: String,
       required: [true, 'Please add a title'],
@@ -14,11 +9,11 @@ const taskSchema = mongoose.Schema(
     },
     description: {
       type: String,
-      required: [true, 'Please add a description'],
+      default: '',
     },
     status: {
       type: String,
-      enum: ['Pending', 'In Progress', 'Completed'],
+      enum: ['Pending', 'In Progress', 'Completed', 'Overdue'],
       default: 'Pending',
     },
     priority: {
@@ -37,6 +32,10 @@ const taskSchema = mongoose.Schema(
       type: Number, // in minutes
       default: 0,
     },
+    timeSpent: {
+      type: Number, // in minutes
+      default: 0,
+    },
     isFavorite: {
       type: Boolean,
       default: false,
@@ -49,13 +48,52 @@ const taskSchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
-    tags: [String],
-    comments: [
+    labels: [
+      {
+        name: String,
+        color: String
+      }
+    ],
+    // Relationships
+    creator: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: 'User',
+    },
+    assignees: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      }
+    ],
+    team: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team',
+    },
+    project: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Project',
+    },
+    // Attachments
+    attachments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'File',
+      }
+    ],
+    // Checklist
+    checklist: [
       {
         text: String,
-        date: { type: Date, default: Date.now }
+        isCompleted: { type: Boolean, default: false },
       }
-    ]
+    ],
+    // Recurring
+    recurring: {
+      isRecurring: { type: Boolean, default: false },
+      frequency: { type: String, enum: ['daily', 'weekly', 'monthly', 'custom'] },
+      customDays: Number,
+    }
   },
   {
     timestamps: true,

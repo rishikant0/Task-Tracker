@@ -18,14 +18,61 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Please add a password'],
+      required: function() { return !this.googleId; }, // Only required if not google login
       minlength: 6,
       select: false,
+    },
+    googleId: {
+      type: String,
+      sparse: true,
+      unique: true
     },
     avatar: {
       type: String,
       default: '',
     },
+    coverImage: {
+      type: String,
+      default: '',
+    },
+    bio: {
+      type: String,
+      maxlength: 500,
+      default: ''
+    },
+    skills: [String],
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user'
+    },
+    preferences: {
+      theme: {
+        type: String,
+        enum: ['light', 'dark', 'system'],
+        default: 'system'
+      },
+      language: {
+        type: String,
+        default: 'en'
+      },
+      emailNotifications: {
+        type: Boolean,
+        default: true
+      },
+      pushNotifications: {
+        type: Boolean,
+        default: true
+      }
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false
+    },
+    emailVerificationToken: String,
+    emailVerificationExpire: Date,
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
   },
   {
     timestamps: true,
@@ -34,7 +81,7 @@ const userSchema = new mongoose.Schema(
 
 // Encrypt password using bcrypt
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
+  if (!this.isModified('password') || !this.password) {
     return next();
   }
 
@@ -44,6 +91,7 @@ userSchema.pre('save', async function (next) {
 
 // Match user entered password to hashed password in database
 userSchema.methods.matchPassword = async function (enteredPassword) {
+  if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

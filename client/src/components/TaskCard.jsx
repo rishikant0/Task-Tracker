@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiCalendar, FiClock, FiAlertCircle, FiStar, FiEdit2, FiTrash2, FiEye, FiMoreHorizontal } from 'react-icons/fi';
+import { Calendar, Clock, AlertCircle, Star, Edit2, Trash2, Eye, MoreHorizontal, CheckCircle2, Copy } from 'lucide-react';
+import ContextMenu from './ContextMenu';
 
 const highlightText = (text, query) => {
   if (!query || !text) return text;
@@ -9,7 +10,7 @@ const highlightText = (text, query) => {
     <span>
       {parts.map((part, i) => 
         part.toLowerCase() === query.toLowerCase() ? (
-          <span key={i} className="bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded px-0.5">{part}</span>
+          <span key={i} className="bg-primary/20 text-primary dark:bg-primary/30 dark:text-primary-light rounded px-0.5">{part}</span>
         ) : (
           <span key={i}>{part}</span>
         )
@@ -19,27 +20,27 @@ const highlightText = (text, query) => {
 };
 
 const TaskCard = ({ task, searchQuery, onEdit, onDelete, onFavorite, onView }) => {
-  const getStatusColor = (status) => {
+  const getStatusConfig = (status) => {
     switch (status) {
-      case 'Completed': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
-      case 'In Progress': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800';
-      case 'Pending': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800';
-      case 'Cancelled': return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700';
-      default: return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400';
+      case 'Completed': return { bg: 'bg-emerald-50 dark:bg-emerald-500/10', color: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-800' };
+      case 'In Progress': return { bg: 'bg-indigo-50 dark:bg-indigo-500/10', color: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-200 dark:border-indigo-800' };
+      case 'Pending': return { bg: 'bg-amber-50 dark:bg-amber-500/10', color: 'text-amber-600 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800' };
+      case 'Cancelled': return { bg: 'bg-slate-50 dark:bg-slate-800', color: 'text-slate-600 dark:text-slate-400', border: 'border-slate-200 dark:border-slate-700' };
+      default: return { bg: 'bg-slate-50 dark:bg-slate-800', color: 'text-slate-600 dark:text-slate-400', border: 'border-slate-200 dark:border-slate-700' };
     }
   };
 
-  const getPriorityBadge = (priority) => {
+  const getPriorityConfig = (priority) => {
     switch (priority) {
-      case 'High': return { color: 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30', icon: <FiAlertCircle className="mr-1" /> };
-      case 'Urgent': return { color: 'text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/30', icon: <FiAlertCircle className="mr-1" /> };
-      case 'Low': return { color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30', icon: <FiClock className="mr-1" /> };
-      default: return { color: 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30', icon: null };
+      case 'High': return { color: 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-500/20', icon: <AlertCircle size={12} className="mr-1" /> };
+      case 'Urgent': return { color: 'text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-500/20', icon: <AlertCircle size={12} className="mr-1" /> };
+      case 'Low': return { color: 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/20', icon: <Clock size={12} className="mr-1" /> };
+      default: return { color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-500/20', icon: null };
     }
   };
 
   const getDueDateInfo = (dateStr) => {
-    if (!dateStr) return { text: 'No due date', color: 'text-slate-400 dark:text-slate-500', icon: FiCalendar };
+    if (!dateStr) return { text: 'No date', color: 'text-slate-400', icon: Calendar };
     const due = new Date(dateStr);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -48,103 +49,111 @@ const TaskCard = ({ task, searchQuery, onEdit, onDelete, onFavorite, onView }) =
     const diffTime = due - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays < 0) return { text: 'Overdue', color: 'text-rose-500 dark:text-rose-400', icon: FiAlertCircle };
-    if (diffDays === 0) return { text: 'Due Today', color: 'text-amber-500 dark:text-amber-400', icon: FiClock };
-    if (diffDays === 1) return { text: 'Tomorrow', color: 'text-emerald-500 dark:text-emerald-400', icon: FiCalendar };
+    if (diffDays < 0) return { text: 'Overdue', color: 'text-rose-500 dark:text-rose-400', icon: AlertCircle };
+    if (diffDays === 0) return { text: 'Today', color: 'text-amber-500 dark:text-amber-400', icon: Clock };
+    if (diffDays === 1) return { text: 'Tomorrow', color: 'text-emerald-500 dark:text-emerald-400', icon: Calendar };
     
-    return { text: due.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), color: 'text-slate-500 dark:text-slate-400', icon: FiCalendar };
+    return { text: due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), color: 'text-slate-500 dark:text-slate-400', icon: Calendar };
   };
 
-  const priorityBadge = getPriorityBadge(task.priority);
+  const statusConfig = getStatusConfig(task.status);
+  const priorityConfig = getPriorityConfig(task.priority);
   const dueInfo = getDueDateInfo(task.dueDate);
   const DueIcon = dueInfo.icon;
 
+  const contextMenuItems = [
+    { label: 'View Details', icon: Eye, action: () => onView(task) },
+    { label: 'Edit Task', icon: Edit2, action: () => onEdit(task) },
+    { label: 'Duplicate', icon: Copy, action: () => {} /* Implement duplicate */ },
+    { divider: true },
+    { label: 'Delete', icon: Trash2, action: () => onDelete(task._id), danger: true },
+  ];
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.03 }}
-      transition={{ duration: 0.3 }}
-      className="flex flex-col bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 rounded-[20px] p-5 shadow-sm hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all duration-300 group h-full relative overflow-hidden"
-    >
-      {/* Decorative Glow */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors pointer-events-none"></div>
-
-      {/* Header */}
-      <div className="flex justify-between items-start mb-3">
-        <h3 className="font-bold text-lg text-slate-800 dark:text-white line-clamp-1 pr-2 z-10">
-          {highlightText(task.title, searchQuery)}
-        </h3>
-        <span className={`flex items-center text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-full whitespace-nowrap z-10 ${priorityBadge.color}`}>
-          {priorityBadge.icon}
-          {task.priority}
-        </span>
-      </div>
-
-      {/* Description */}
-      <div className="flex-grow z-10">
-        <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3 mb-2">
-          {highlightText(task.description, searchQuery)}
-        </p>
-        {task.description && task.description.length > 100 && (
-          <button onClick={() => onView(task)} className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline">
-            Read More
-          </button>
-        )}
-      </div>
-
-      {/* Badges & Info */}
-      <div className="flex flex-wrap items-center gap-2 mt-4 mb-5 z-10">
-        <span className={`px-2.5 py-1 text-xs font-medium rounded-full border ${getStatusColor(task.status)} transition-colors`}>
-          {task.status}
-        </span>
-        
-        <span className={`flex items-center gap-1 text-xs font-medium ${dueInfo.color}`}>
-          <DueIcon size={12} />
-          {dueInfo.text}
-        </span>
-
-        {task.category && (
-          <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-full">
-            {task.category}
-          </span>
-        )}
-      </div>
-
-      {/* Footer Actions */}
-      <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between z-10">
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => onFavorite(task)}
-          className={`p-2 rounded-full transition-colors ${task.isFavorite ? 'text-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-amber-400'}`}
-        >
-          <FiStar className={task.isFavorite ? 'fill-current' : ''} />
-        </motion.button>
-        
-        <div className="flex gap-1">
-          <button onClick={() => onView(task)} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-            <FiEye size={14} /> <span>View</span>
-          </button>
-          <button onClick={() => onView(task)} className="sm:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-            <FiEye size={16} />
-          </button>
-
-          <button onClick={() => onEdit(task)} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors">
-            <FiEdit2 size={14} /> <span>Edit</span>
-          </button>
-          <button onClick={() => onEdit(task)} className="sm:hidden p-2 text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-900/20 rounded-lg transition-colors">
-            <FiEdit2 size={16} />
-          </button>
-
-          <button onClick={() => onDelete(task._id)} className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors">
-            <FiTrash2 size={14} /> <span>Delete</span>
-          </button>
-          <button onClick={() => onDelete(task._id)} className="sm:hidden p-2 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/20 rounded-lg transition-colors">
-            <FiTrash2 size={16} />
+    <ContextMenu items={contextMenuItems} className="h-full">
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        whileHover={{ y: -4 }}
+        className={`glass-card p-5 rounded-2xl border ${task.status === 'Completed' ? 'border-emerald-200/50 dark:border-emerald-800/30 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-slate-200 dark:border-slate-700/50'} hover:border-primary/50 transition-all group flex flex-col h-full cursor-pointer`}
+        onClick={() => onView(task)}
+      >
+        {/* Header */}
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex gap-2">
+            <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${priorityConfig.color}`}>
+              {priorityConfig.icon}
+              {task.priority}
+            </span>
+          </div>
+          
+          <button 
+            onClick={(e) => { e.stopPropagation(); onFavorite(task); }}
+            className={`p-1.5 rounded-lg transition-colors ${task.isFavorite ? 'text-warning bg-warning/10' : 'text-slate-400 hover:text-warning hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+          >
+            <Star size={16} className={task.isFavorite ? 'fill-warning' : ''} />
           </button>
         </div>
-      </div>
-    </motion.div>
+
+        {/* Title & Description */}
+        <div className="mb-4 flex-1">
+          <h3 className={`font-bold text-lg mb-1.5 line-clamp-2 transition-colors ${task.status === 'Completed' ? 'text-slate-500 line-through' : 'text-slate-900 dark:text-white group-hover:text-primary'}`}>
+            {highlightText(task.title, searchQuery)}
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed">
+            {highlightText(task.description, searchQuery)}
+          </p>
+        </div>
+
+        {/* Meta */}
+        <div className="flex flex-wrap items-center gap-3 mt-auto mb-4">
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusConfig.bg} ${statusConfig.color} ${statusConfig.border}`}>
+            {task.status === 'Completed' && <CheckCircle2 size={12} className="mr-1" />}
+            {task.status === 'Pending' ? 'Todo' : task.status}
+          </span>
+          
+          {task.category && (
+            <span className="px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 rounded-full border border-slate-200 dark:border-slate-700">
+              {task.category}
+            </span>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800/80">
+          <div className={`flex items-center gap-1.5 text-xs font-medium ${dueInfo.color}`}>
+            <DueIcon size={14} />
+            {dueInfo.text}
+          </div>
+          
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button 
+              onClick={(e) => { e.stopPropagation(); onView(task); }} 
+              className="p-1.5 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+              title="View details"
+            >
+              <Eye size={16} />
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onEdit(task); }} 
+              className="p-1.5 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+              title="Edit task"
+            >
+              <Edit2 size={16} />
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onDelete(task._id); }} 
+              className="p-1.5 text-slate-500 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
+              title="Delete task"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </ContextMenu>
   );
 };
 

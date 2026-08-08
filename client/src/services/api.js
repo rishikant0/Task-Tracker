@@ -39,4 +39,35 @@ export const deleteTask = (id) => api.delete(`/tasks/${id}`);
 export const updateTaskOrder = (data) => api.put('/tasks/order', data);
 export const getAnalytics = () => api.get('/tasks/analytics/dashboard');
 
+// Projects
+export const getProjects = (params) => api.get('/projects', { params });
+export const getProject = (id) => api.get(`/projects/${id}`);
+export const createProject = (data) => api.post('/projects', data);
+export const updateProject = (id, data) => api.put(`/projects/${id}`, data);
+export const deleteProject = (id) => api.delete(`/projects/${id}`);
+
+// Teams
+export const getTeams = () => api.get('/teams');
+export const getTeam = (id) => api.get(`/teams/${id}`);
+export const createTeam = (data) => api.post('/teams', data);
+export const updateTeam = (id, data) => api.put(`/teams/${id}`, data);
+export const deleteTeam = (id) => api.delete(`/teams/${id}`);
+export const inviteMember = (teamId, data) => api.post(`/teams/${teamId}/invite`, data);
+export const acceptInvitation = (token) => api.post(`/teams/invite/accept/${token}`);
+export const removeMember = (teamId, userId) => api.delete(`/teams/${teamId}/members/${userId}`);
+export const updateMemberRole = (teamId, userId, role) => api.put(`/teams/${teamId}/members/${userId}`, { role });
+
+// Files
+export const getFiles = (params) => api.get('/files', { params });
+export const uploadFile = (data) => api.post('/files', data, {
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
+});
+export const deleteFile = (id) => api.delete(`/files/${id}`);
+
+// Messages
+export const getMessages = (params) => api.get('/messages', { params });
+export const sendMessage = (data) => api.post('/messages', data);
+
 export default api;
