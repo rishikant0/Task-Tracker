@@ -3,7 +3,7 @@
 TaskMaster is a modern Task Tracker web application built with the MERN Stack **(MongoDB, Express.js, React.js, Node.js)**. It provides secure authentication, task management, analytics, and a responsive user interface inspired by modern SaaS applications.
 
 🌐 Live Demo
-web site:- https://task-tracker-alpha-sand.vercel.app/
+web site:- [https://task-tracker-alpha-sand.vercel.app/](https://task-tracker-alpha-sand.vercel.app/)
 
 ## ✨ Features
 
