@@ -1,104 +1,145 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
-import { motion } from 'framer-motion';
-import { FiMail, FiLock, FiLogIn } from 'react-icons/fi';
-import { loginUser } from '../services/api';
+import { Zap, Loader2, Eye, EyeOff } from 'lucide-react';
+import { login } from '../services/api';
 import useAuthStore from '../store/useAuthStore';
+import toast from 'react-hot-toast';
 
 const Login = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm();
-  const [isLoading, setIsLoading] = useState(false);
+  const { login: loginStore } = useAuthStore();
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
 
-  const onSubmit = async (data) => {
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const validate = () => {
+    const errs = {};
+    if (!form.email.trim()) errs.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Invalid email format';
+    if (!form.password) errs.password = 'Password is required';
+    return errs;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
+    setLoading(true);
     try {
-      setIsLoading(true);
-      const res = await loginUser(data);
-      login({ name: res.data.name, email: res.data.email, _id: res.data._id }, res.data.token);
-      toast.success('Welcome back!');
+      const res = await login({ email: form.email, password: form.password });
+      const { token, ...userData } = res.data;
+      loginStore(userData, token);
+      toast.success(`Welcome back, ${userData.name}!`);
       navigate('/');
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Invalid credentials';
+      setErrors({ general: msg });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    if (errors[name] || errors.general) {
+      setErrors((prev) => ({ ...prev, [name]: '', general: '' }));
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="glass-card w-full max-w-md p-8"
-      >
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
+    <div className="min-h-screen bg-bg-main flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-glow">
+            <Zap size={20} className="text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white">TaskMaster</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-2">Sign in to continue to your workspace</p>
+          <span className="text-2xl font-bold text-text-primary">TaskFlow</span>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <FiMail />
-              </div>
+        <div className="card p-8">
+          <div className="mb-6">
+            <h1 className="text-xl font-bold text-text-primary">Sign in</h1>
+            <p className="text-sm text-text-secondary mt-1">
+              Welcome back! Enter your credentials to continue.
+            </p>
+          </div>
+
+          {errors.general && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {errors.general}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            {/* Email */}
+            <div>
+              <label htmlFor="login-email" className="block text-sm font-medium text-text-secondary mb-1.5">
+                Email
+              </label>
               <input
+                id="login-email"
+                name="email"
                 type="email"
-                className={`input-field pl-10 ${errors.email ? 'border-red-500' : ''}`}
+                value={form.email}
+                onChange={handleChange}
                 placeholder="you@example.com"
-                {...register('email', { required: 'Email is required' })}
+                className={`field w-full ${errors.email ? 'border-red-500' : ''}`}
+                autoComplete="email"
               />
+              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
             </div>
-            {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>}
-          </div>
 
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
-              <Link to="#" className="text-sm font-medium text-indigo-600 hover:text-indigo-500">Forgot password?</Link>
-            </div>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <FiLock />
+            {/* Password */}
+            <div>
+              <label htmlFor="login-password" className="block text-sm font-medium text-text-secondary mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="login-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  className={`field w-full pr-10 ${errors.password ? 'border-red-500' : ''}`}
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
-              <input
-                type="password"
-                className={`input-field pl-10 ${errors.password ? 'border-red-500' : ''}`}
-                placeholder="••••••••"
-                {...register('password', { required: 'Password is required' })}
-              />
+              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
             </div>
-            {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>}
-          </div>
 
-          <button type="submit" disabled={isLoading} className="btn btn-primary w-full py-3">
-            {isLoading ? (
-              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <>
-                <FiLogIn className="mr-2" /> Sign In
-              </>
-            )}
-          </button>
-        </form>
+            <button
+              id="login-submit"
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-2.5 mt-2"
+            >
+              {loading ? <Loader2 size={18} className="animate-spin" /> : 'Sign In'}
+            </button>
+          </form>
 
-        <p className="mt-8 text-center text-sm text-slate-600 dark:text-slate-400">
-          Don't have an account?{' '}
-          <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-500">
-            Sign up
-          </Link>
-        </p>
-      </motion.div>
+          <p className="text-center text-sm text-text-secondary mt-6">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-primary hover:text-primary-hover font-medium transition-colors">
+              Sign Up
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

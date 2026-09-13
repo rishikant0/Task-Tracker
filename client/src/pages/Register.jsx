@@ -1,139 +1,187 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
-import { motion } from 'framer-motion';
-import { FiMail, FiLock, FiUser, FiUserPlus } from 'react-icons/fi';
-import { registerUser as registerApi } from '../services/api';
-import useAuthStore from '../store/useAuthStore';
+import { Zap, Loader2, Eye, EyeOff } from 'lucide-react';
+import { register } from '../services/api';
+import toast from 'react-hot-toast';
 
 const Register = () => {
-  const { register, handleSubmit, formState: { errors }, watch } = useForm();
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
-  
-  const password = watch("password");
 
-  const onSubmit = async (data) => {
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const validate = () => {
+    const errs = {};
+    if (!form.name.trim()) errs.name = 'Name is required';
+    if (!form.email.trim()) errs.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Invalid email format';
+    if (!form.password) errs.password = 'Password is required';
+    else if (form.password.length < 6) errs.password = 'Password must be at least 6 characters';
+    if (!form.confirmPassword) errs.confirmPassword = 'Please confirm your password';
+    else if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match';
+    return errs;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
+    setLoading(true);
     try {
-      setIsLoading(true);
-      const res = await registerApi(data);
-      login({ name: res.data.name, email: res.data.email, _id: res.data._id }, res.data.token);
-      toast.success('Account created successfully!');
-      navigate('/');
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      await register({ name: form.name, email: form.email, password: form.password });
+      toast.success('Account created! Please sign in.');
+      navigate('/login');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Registration failed';
+      if (msg.toLowerCase().includes('email')) {
+        setErrors({ email: msg });
+      } else {
+        setErrors({ general: msg });
+      }
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    if (errors[name] || errors.general) {
+      setErrors((prev) => ({ ...prev, [name]: '', general: '' }));
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="glass-card w-full max-w-md p-8"
-      >
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-4">
-            <FiUserPlus className="h-8 w-8 text-white" />
+    <div className="min-h-screen bg-bg-main flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-glow">
+            <Zap size={20} className="text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Create Account</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-2">Join TaskMaster and boost your productivity</p>
+          <span className="text-2xl font-bold text-text-primary">TaskFlow</span>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Full Name</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <FiUser />
-              </div>
+        <div className="card p-8">
+          <div className="mb-6">
+            <h1 className="text-xl font-bold text-text-primary">Create account</h1>
+            <p className="text-sm text-text-secondary mt-1">
+              Start managing your tasks today.
+            </p>
+          </div>
+
+          {errors.general && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {errors.general}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            {/* Name */}
+            <div>
+              <label htmlFor="reg-name" className="block text-sm font-medium text-text-secondary mb-1.5">
+                Full Name
+              </label>
               <input
+                id="reg-name"
+                name="name"
                 type="text"
-                className={`input-field pl-10 ${errors.name ? 'border-red-500' : ''}`}
+                value={form.name}
+                onChange={handleChange}
                 placeholder="John Doe"
-                {...register('name', { required: 'Name is required' })}
+                className={`field w-full ${errors.name ? 'border-red-500' : ''}`}
+                autoComplete="name"
               />
+              {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
             </div>
-            {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name.message}</p>}
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <FiMail />
-              </div>
+            {/* Email */}
+            <div>
+              <label htmlFor="reg-email" className="block text-sm font-medium text-text-secondary mb-1.5">
+                Email
+              </label>
               <input
+                id="reg-email"
+                name="email"
                 type="email"
-                className={`input-field pl-10 ${errors.email ? 'border-red-500' : ''}`}
+                value={form.email}
+                onChange={handleChange}
                 placeholder="you@example.com"
-                {...register('email', { 
-                  required: 'Email is required',
-                  pattern: { value: /^\S+@\S+$/i, message: 'Invalid email address' }
-                })}
+                className={`field w-full ${errors.email ? 'border-red-500' : ''}`}
+                autoComplete="email"
               />
+              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
             </div>
-            {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>}
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <FiLock />
+            {/* Password */}
+            <div>
+              <label htmlFor="reg-password" className="block text-sm font-medium text-text-secondary mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="reg-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Min. 6 characters"
+                  className={`field w-full pr-10 ${errors.password ? 'border-red-500' : ''}`}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
+                  aria-label="Toggle password"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
-              <input
-                type="password"
-                className={`input-field pl-10 ${errors.password ? 'border-red-500' : ''}`}
-                placeholder="••••••••"
-                {...register('password', { 
-                  required: 'Password is required',
-                  minLength: { value: 6, message: 'Password must be at least 6 characters' }
-                })}
-              />
+              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
             </div>
-            {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>}
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Confirm Password</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <FiLock />
-              </div>
+            {/* Confirm Password */}
+            <div>
+              <label htmlFor="reg-confirm" className="block text-sm font-medium text-text-secondary mb-1.5">
+                Confirm Password
+              </label>
               <input
+                id="reg-confirm"
+                name="confirmPassword"
                 type="password"
-                className={`input-field pl-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-                placeholder="••••••••"
-                {...register('confirmPassword', { 
-                  validate: value => value === password || 'The passwords do not match'
-                })}
+                value={form.confirmPassword}
+                onChange={handleChange}
+                placeholder="Repeat password"
+                className={`field w-full ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                autoComplete="new-password"
               />
+              {errors.confirmPassword && (
+                <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>
+              )}
             </div>
-            {errors.confirmPassword && <p className="mt-1 text-sm text-red-500">{errors.confirmPassword.message}</p>}
-          </div>
 
-          <button type="submit" disabled={isLoading} className="btn btn-primary w-full py-3 mt-4">
-            {isLoading ? (
-              <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              'Sign Up'
-            )}
-          </button>
-        </form>
+            <button
+              id="register-submit"
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-2.5 mt-2"
+            >
+              {loading ? <Loader2 size={18} className="animate-spin" /> : 'Create Account'}
+            </button>
+          </form>
 
-        <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
-          Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-indigo-600 hover:text-indigo-500">
-            Sign in
-          </Link>
-        </p>
-      </motion.div>
+          <p className="text-center text-sm text-text-secondary mt-6">
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary hover:text-primary-hover font-medium transition-colors">
+              Sign In
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

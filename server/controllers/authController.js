@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 
 // Generate JWT
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'secret123', {
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'taskflow_secret_2026', {
     expiresIn: '30d',
   });
 };
@@ -16,34 +16,30 @@ exports.registerUser = async (req, res) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please add all fields' });
+      return res.status(400).json({ message: 'Please fill in all fields' });
     }
 
-    // Check if user exists
-    const userExists = await User.findOne({ email });
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
 
+    const userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: 'Email already registered' });
     }
 
-    // Create user
     const user = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
       password,
     });
-    
-    // Create welcome notification and activity
-    const Notification = require('../models/Notification');
-    const Activity = require('../models/Activity');
-    await Notification.create({ user: user._id, message: 'Welcome to TaskMaster!', type: 'welcome' });
-    await Activity.create({ user: user._id, action: 'Account Created', details: 'Joined TaskMaster' });
 
     if (user) {
       res.status(201).json({
         _id: user.id,
         name: user.name,
         email: user.email,
+        createdAt: user.createdAt,
         token: generateToken(user._id),
       });
     } else {
@@ -61,99 +57,60 @@ exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Check for user email
-    const user = await User.findOne({ email }).select('+password');
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Please provide email and password' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
 
     if (user && (await user.matchPassword(password))) {
       res.json({
         _id: user.id,
         name: user.name,
         email: user.email,
+        createdAt: user.createdAt,
         token: generateToken(user._id),
       });
     } else {
-      res.status(401).json({ message: 'Invalid credentials' });
+      res.status(401).json({ message: 'Invalid email or password' });
     }
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 };
 
-// @desc    Get user data
+// @desc    Get current user data
 // @route   GET /api/auth/me
 // @access  Private
 exports.getMe = async (req, res) => {
-  res.status(200).json(req.user);
+  const user = await User.findById(req.user.id);
+  res.status(200).json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    createdAt: user.createdAt,
+  });
 };
 
-// @desc    Update user profile
+// @desc    Update user profile (name)
 // @route   PUT /api/auth/profile
 // @access  Private
 exports.updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    if (user) {
-      user.name = req.body.name || user.name;
-      user.email = req.body.email || user.email;
-      
-      const updatedUser = await user.save();
-      
-      const Activity = require('../models/Activity');
-      await Activity.create({ user: user._id, action: 'Profile Updated', details: 'Updated profile information' });
-      
-      res.json({
-        _id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        token: generateToken(updatedUser._id)
-      });
-    } else {
-      res.status(404).json({ message: 'User not found' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error', error: error.message });
-  }
-};
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-// @desc    Change Password
-// @route   PUT /api/auth/password
-// @access  Private
-exports.changePassword = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('+password');
-    const { currentPassword, newPassword } = req.body;
-    
-    if (user && (await user.matchPassword(currentPassword))) {
-      user.password = newPassword;
-      await user.save();
-      
-      const Activity = require('../models/Activity');
-      await Activity.create({ user: user._id, action: 'Security Update', details: 'Password changed' });
-      
-      res.json({ message: 'Password updated successfully' });
-    } else {
-      res.status(401).json({ message: 'Invalid current password' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error', error: error.message });
-  }
-};
+    if (req.body.name) user.name = req.body.name.trim();
 
-// @desc    Delete Account
-// @route   DELETE /api/auth/account
-// @access  Private
-exports.deleteAccount = async (req, res) => {
-  try {
-    const Task = require('../models/Task');
-    const Notification = require('../models/Notification');
-    const Activity = require('../models/Activity');
-    
-    await Task.deleteMany({ user: req.user.id });
-    await Notification.deleteMany({ user: req.user.id });
-    await Activity.deleteMany({ user: req.user.id });
-    await User.findByIdAndDelete(req.user.id);
-    
-    res.json({ message: 'Account and all data deleted' });
+    const updatedUser = await user.save();
+
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      createdAt: updatedUser.createdAt,
+      token: generateToken(updatedUser._id),
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server Error', error: error.message });
   }

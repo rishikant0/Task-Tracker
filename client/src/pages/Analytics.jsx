@@ -1,195 +1,176 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  LineChart, Line, AreaChart, Area, ComposedChart
-} from 'recharts';
-import { Download, Filter, TrendingUp, Clock, CheckCircle2, Zap, Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import {
+  LayoutList,
+  CheckSquare,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Flame,
+} from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { getAnalytics } from '../services/api';
 
+const PIE_COLORS = { todo: '#3B82F6', 'in-progress': '#F59E0B', done: '#22C55E' };
 
-
-const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const hours = ['8a', '10a', '12p', '2p', '4p', '6p', '8p'];
-
-const Analytics = () => {
-  const [timeRange, setTimeRange] = useState('Weekly');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [heatmapData, setHeatmapData] = useState([]);
-
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const res = await getAnalytics();
-        setData(res.data);
-        setHeatmapData(res.data.heatmap || []);
-      } catch (error) {
-        console.error('Failed to fetch analytics', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAnalytics();
-  }, [timeRange]);
-
-  const StatBox = ({ title, value, trend, icon: Icon, color }) => (
-    <div className="glass-card p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-      <div className="flex justify-between items-start mb-4">
-        <div className={`p-3 rounded-xl bg-gradient-to-br ${color} text-white shadow-md`}>
-          <Icon size={24} />
-        </div>
-        <span className={`flex items-center gap-1 text-sm font-bold ${trend >= 0 ? 'text-success' : 'text-danger'}`}>
-          {trend >= 0 ? '+' : ''}{trend}%
-        </span>
+const StatCard = ({ label, value, icon: Icon, color, sub }) => (
+  <div className="stat-card">
+    <div className="flex items-center justify-between">
+      <p className="text-xs font-medium text-text-secondary uppercase tracking-wide">{label}</p>
+      <div
+        className="w-8 h-8 rounded-lg flex items-center justify-center"
+        style={{ background: `${color}20` }}
+      >
+        <Icon size={16} style={{ color }} />
       </div>
-      <h3 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">{value}</h3>
-      <p className="text-sm font-medium text-slate-500">{title}</p>
     </div>
-  );
+    <p className="text-3xl font-bold text-text-primary">{value}</p>
+    {sub && <p className="text-xs text-text-secondary">{sub}</p>}
+  </div>
+);
 
-  if (loading) {
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload?.length) {
+    const { name, value, percent } = payload[0];
     return (
-      <div className="flex items-center justify-center h-full min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="card px-3 py-2 text-xs shadow-modal">
+        <p className="text-text-primary font-medium">{name}</p>
+        <p className="text-text-secondary">{value} tasks · {(percent * 100).toFixed(0)}%</p>
       </div>
     );
   }
+  return null;
+};
 
-  const stats = data?.stats || { total: 0, completed: 0 };
-  const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
-  
-  // Format weeklyData to match ComposedChart expected data format (adding mock hours)
-  const chartData = (data?.weekly || []).map(d => ({
-    name: d.name,
-    completed: d.tasks,
-    hours: Math.round(d.tasks * 1.5 * 10) / 10 // roughly 1.5 hours per task
-  }));
+const Analytics = () => {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getAnalytics()
+      .then((res) => setStats(res.data.stats))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const s = stats || { total: 0, todo: 0, inProgress: 0, done: 0, highPriority: 0, overdue: 0 };
+
+  const pieData = [
+    { name: 'To Do', value: s.todo, key: 'todo' },
+    { name: 'In Progress', value: s.inProgress, key: 'in-progress' },
+    { name: 'Done', value: s.done, key: 'done' },
+  ].filter((d) => d.value > 0);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-10">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-sm">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Performance Analytics</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Detailed insights into your productivity and task completion.</p>
-        </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <select 
-            value={timeRange} 
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="input-field h-10 py-0 w-32"
-          >
-            <option>Weekly</option>
-            <option>Monthly</option>
-            <option>Yearly</option>
-          </select>
-          <button className="btn bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2">
-            <Filter size={16} /> Filters
-          </button>
-          <button className="btn btn-primary flex items-center gap-2">
-            <Download size={16} /> Export
-          </button>
-        </div>
+    <div className="space-y-6 pb-8">
+      <div>
+        <h1 className="text-xl font-bold text-text-primary">Analytics</h1>
+        <p className="text-sm text-text-secondary mt-0.5">Overview of your task management</p>
       </div>
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatBox title="Completion Rate" value={`${completionRate}%`} trend={completionRate > 50 ? 5.2 : -1.2} icon={CheckCircle2} color="from-emerald-500 to-teal-500" />
-        <StatBox title="Productivity Score" value={Math.min(100, completionRate + 15)} trend={1.8} icon={TrendingUp} color="from-indigo-500 to-blue-500" />
-        <StatBox title="Total Tasks" value={stats.total} trend={0} icon={Zap} color="from-purple-500 to-pink-500" />
-        <StatBox title="Hours Logged" value={`${Math.round(stats.completed * 1.5)}h`} trend={2.4} icon={Clock} color="from-orange-500 to-amber-500" />
-      </div>
+      {loading ? (
+        <div className="text-center py-16 text-text-secondary text-sm">Loading analytics...</div>
+      ) : (
+        <>
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+            <StatCard label="Total" value={s.total} icon={LayoutList} color="#7C5CFF" />
+            <StatCard label="To Do" value={s.todo} icon={CheckSquare} color="#3B82F6" />
+            <StatCard label="In Progress" value={s.inProgress} icon={Clock} color="#F59E0B" />
+            <StatCard label="Done" value={s.done} icon={CheckCircle2} color="#22C55E"
+              sub={s.total > 0 ? `${Math.round((s.done / s.total) * 100)}% complete` : ''} />
+            <StatCard label="High Priority" value={s.highPriority} icon={Flame} color="#EF4444" />
+            <StatCard label="Overdue" value={s.overdue} icon={AlertTriangle} color="#EF4444" />
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Productivity Trend */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-6 rounded-3xl border border-slate-200 dark:border-slate-700/50"
-        >
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Productivity Trend</h3>
-            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md">Last 7 Days</span>
-          </div>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366F1" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#6366F1" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
-                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                <RechartsTooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1E293B', color: '#fff' }}
-                  itemStyle={{ color: '#fff' }}
-                />
-                <Bar yAxisId="left" dataKey="completed" name="Tasks" fill="#6366F1" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                <Line yAxisId="right" type="monotone" dataKey="hours" name="Hours" stroke="#F59E0B" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
+          {/* Chart + breakdown */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Donut chart */}
+            <div className="card p-6">
+              <h2 className="section-title mb-4">Task Status Distribution</h2>
+              {pieData.length === 0 ? (
+                <div className="flex items-center justify-center py-10 text-text-secondary text-sm">
+                  No tasks to display
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                  <div className="w-48 h-48 flex-shrink-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={52}
+                          outerRadius={74}
+                          paddingAngle={4}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {pieData.map((entry) => (
+                            <Cell key={entry.key} fill={PIE_COLORS[entry.key]} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    {pieData.map((entry) => {
+                      const pct = s.total > 0 ? Math.round((entry.value / s.total) * 100) : 0;
+                      return (
+                        <div key={entry.key} className="flex items-center gap-3">
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ background: PIE_COLORS[entry.key] }}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm text-text-secondary">{entry.name}</span>
+                              <span className="text-sm font-semibold text-text-primary">{pct}%</span>
+                            </div>
+                            <div className="h-1.5 bg-bg-card-hover rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                  width: `${pct}%`,
+                                  background: PIE_COLORS[entry.key],
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-sm font-medium text-text-primary w-6 text-right">
+                            {entry.value}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
 
-        {/* Focus Heatmap (Simulated) */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="glass-card p-6 rounded-3xl border border-slate-200 dark:border-slate-700/50 flex flex-col"
-        >
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Activity Heatmap</h3>
-            <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md">Peak Hours</span>
-          </div>
-          
-          <div className="flex-1 flex flex-col justify-between">
-            <div className="grid grid-cols-8 gap-2">
-              <div className="col-span-1 flex flex-col justify-between py-2 text-xs text-slate-400 font-medium h-[240px]">
-                {days.map(d => <span key={d}>{d}</span>)}
+            {/* Summary table */}
+            <div className="card p-6">
+              <h2 className="section-title mb-4">Summary</h2>
+              <div className="space-y-3">
+                {[
+                  { label: 'Total Tasks', value: s.total, color: '#7C5CFF' },
+                  { label: 'To Do', value: s.todo, color: '#3B82F6' },
+                  { label: 'In Progress', value: s.inProgress, color: '#F59E0B' },
+                  { label: 'Completed', value: s.done, color: '#22C55E' },
+                  { label: 'High Priority', value: s.highPriority, color: '#EF4444' },
+                  { label: 'Overdue', value: s.overdue, color: '#EF4444' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="flex items-center justify-between py-2 border-b border-border-default last:border-0">
+                    <span className="text-sm text-text-secondary">{label}</span>
+                    <span className="text-sm font-bold" style={{ color }}>{value}</span>
+                  </div>
+                ))}
               </div>
-              <div className="col-span-7 grid grid-cols-12 gap-1.5 h-[240px]">
-                {heatmapData.map((d, i) => {
-                  let colorClass = 'bg-slate-100 dark:bg-slate-800';
-                  if (d.value > 80) colorClass = 'bg-primary';
-                  else if (d.value > 60) colorClass = 'bg-primary/70';
-                  else if (d.value > 40) colorClass = 'bg-primary/50';
-                  else if (d.value > 20) colorClass = 'bg-primary/30';
-                  
-                  return (
-                    <div 
-                      key={i} 
-                      className={`rounded-sm w-full h-[28px] ${colorClass} hover:ring-2 hover:ring-white dark:hover:ring-slate-900 transition-all cursor-pointer`}
-                      title={`${d.value}% active`}
-                    ></div>
-                  );
-                })}
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between pl-[12.5%] mt-3 text-xs text-slate-400 font-medium">
-              {hours.map(h => <span key={h}>{h}</span>)}
-            </div>
-            
-            <div className="flex items-center justify-end gap-2 mt-4 text-xs font-medium text-slate-500">
-              <span>Less</span>
-              <div className="flex gap-1">
-                <div className="w-3 h-3 rounded-sm bg-slate-100 dark:bg-slate-800"></div>
-                <div className="w-3 h-3 rounded-sm bg-primary/30"></div>
-                <div className="w-3 h-3 rounded-sm bg-primary/50"></div>
-                <div className="w-3 h-3 rounded-sm bg-primary/70"></div>
-                <div className="w-3 h-3 rounded-sm bg-primary"></div>
-              </div>
-              <span>More</span>
             </div>
           </div>
-        </motion.div>
-      </div>
+        </>
+      )}
     </div>
   );
 };

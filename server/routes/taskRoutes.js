@@ -6,25 +6,17 @@ const {
   createTask,
   updateTask,
   deleteTask,
-  updateTaskOrder,
-  getAnalytics
+  getAnalytics,
 } = require('../controllers/taskController');
-const { validateTask } = require('../middlewares/validateTask');
 const { protect } = require('../middlewares/authMiddleware');
 
 // All routes are protected
 router.use(protect);
 
 router.route('/analytics/dashboard').get(getAnalytics);
-router.route('/order').put(updateTaskOrder);
 
-router.route('/')
-  .get(getTasks)
-  .post(validateTask, createTask);
+router.route('/').get(getTasks).post(createTask);
 
-router.route('/:id')
-  .get(getTask)
-  .put(validateTask, updateTask)
-  .delete(deleteTask);
+router.route('/:id').get(getTask).put(updateTask).delete(deleteTask);
 
 module.exports = router;

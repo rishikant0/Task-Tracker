@@ -1,179 +1,108 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Search, Bell, Moon, Sun, Menu, User, Settings, 
-  LogOut, Plus, Sparkles, ChevronRight
-} from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Menu, Search, ChevronDown, LogOut, User, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
-import useThemeStore from '../store/useThemeStore';
-import { getNotifications, markAllNotificationsAsRead } from '../services/api';
+import toast from 'react-hot-toast';
 
-const TopNavbar = ({ toggleMobileSidebar, openCommandPalette }) => {
-  const user = useAuthStore(state => state.user);
-  const logout = useAuthStore(state => state.logout);
-  const { isDarkMode, toggleDarkMode } = useThemeStore();
+const TopNavbar = ({ onMenuClick, searchQuery, setSearchQuery }) => {
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
-  
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
-    fetchNotifications();
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await getNotifications();
-      setNotifications(res.data || []);
-    } catch (e) {}
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+    toast.success('Logged out successfully');
   };
 
-  const handleSearch = (e) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      navigate(`/list?search=${encodeURIComponent(searchQuery)}`);
-    }
-  };
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  const currentDate = new Date().toLocaleDateString('en-US', { 
-    weekday: 'long', month: 'short', day: 'numeric' 
-  });
+  const initials = user?.name
+    ? user.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'U';
 
   return (
-    <header className="sticky top-0 z-40 glass-panel border-b border-white/20 dark:border-slate-700/30 px-4 sm:px-8 h-20 flex items-center justify-between shadow-sm">
-      <div className="flex items-center gap-4 lg:gap-8">
-        <button 
-          className="lg:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" 
-          onClick={toggleMobileSidebar}
-        >
-          <Menu size={24} />
-        </button>
+    <header className="h-16 bg-bg-sidebar border-b border-border-default flex items-center gap-4 px-4 sm:px-6 flex-shrink-0">
+      {/* Hamburger (mobile only) */}
+      <button
+        id="mobile-menu-btn"
+        onClick={onMenuClick}
+        className="btn-icon lg:hidden flex-shrink-0"
+        aria-label="Open menu"
+      >
+        <Menu size={20} />
+      </button>
 
-        {/* Breadcrumbs / Date */}
-        <div className="hidden lg:flex items-center gap-2 text-sm font-medium text-slate-500">
-          <span>{currentDate}</span>
-          <ChevronRight size={14} className="text-slate-400" />
-          <span className="text-primary font-semibold">Workspace</span>
-        </div>
-
-        {/* Search Bar */}
-        <div 
-          onClick={openCommandPalette}
-          className="hidden sm:flex items-center bg-slate-100/50 dark:bg-slate-800/50 rounded-2xl px-4 py-2.5 w-64 md:w-80 border border-slate-200/50 dark:border-slate-700/50 transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:bg-white dark:focus-within:bg-slate-800 cursor-pointer hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
-        >
-          <Search size={18} className="text-slate-400" />
-          <div className="ml-3 w-full text-sm text-slate-400 font-medium">Search everything... (Ctrl+K)</div>
-        </div>
+      {/* Search */}
+      <div className="flex-1 max-w-md relative">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none" />
+        <input
+          id="task-search"
+          type="text"
+          placeholder="Search tasks..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-9 pr-4 py-2 text-sm bg-bg-card border border-border-default rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-colors"
+        />
       </div>
 
-      <div className="flex items-center gap-3 sm:gap-5">
-        <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl shadow-glow transition-all hover:scale-105 active:scale-95 text-sm font-medium">
-          <Sparkles size={16} />
-          AI Assistant
-        </button>
-
-        <button className="p-2 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-          <Plus size={20} />
-        </button>
-
-        <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
-
-        <button onClick={toggleDarkMode} className="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
-        
-        {/* Notifications */}
-        <div className="relative">
-          <button 
-            onClick={() => setShowNotifications(!showNotifications)} 
-            className="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative"
+      <div className="ml-auto flex items-center gap-3">
+        {/* User profile dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            id="user-profile-btn"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-2.5 hover:bg-bg-card rounded-lg px-2 py-1.5 transition-colors"
           >
-            <Bell size={20} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-danger border-2 border-white dark:border-slate-900 rounded-full animate-pulse"></span>
-            )}
+            {/* Avatar */}
+            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              {initials}
+            </div>
+            <span className="hidden sm:block text-sm font-medium text-text-primary max-w-[120px] truncate">
+              {user?.name || 'User'}
+            </span>
+            <ChevronDown size={14} className="text-text-secondary hidden sm:block" />
           </button>
-          
-          <AnimatePresence>
-            {showNotifications && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowNotifications(false)} />
-                <motion.div 
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }} 
-                  animate={{ opacity: 1, y: 0, scale: 1 }} 
-                  exit={{ opacity: 0, scale: 0.95 }} 
-                  className="absolute right-0 mt-3 w-80 glass-card p-0 overflow-hidden z-20 shadow-2xl border border-white/20 dark:border-slate-700/50 rounded-2xl"
-                >
-                  <div className="p-4 border-b border-slate-200 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
-                    <h3 className="font-bold text-slate-800 dark:text-white">Notifications</h3>
-                    <button onClick={async () => { await markAllNotificationsAsRead(); fetchNotifications(); }} className="text-xs text-primary hover:text-primary-dark font-medium">Mark all read</button>
-                  </div>
-                  <div className="max-h-80 overflow-y-auto p-2">
-                    {notifications.length > 0 ? notifications.map(n => (
-                      <div key={n._id} className={`p-3 mb-1 rounded-xl cursor-pointer transition-colors ${!n.isRead ? 'bg-primary/5 dark:bg-primary/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                        <p className={`text-sm ${!n.isRead ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}>{n.message}</p>
-                        <p className="text-xs text-slate-400 mt-1">{new Date(n.createdAt).toLocaleDateString()}</p>
-                      </div>
-                    )) : (
-                      <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-2">
-                        <Bell size={24} className="opacity-20" />
-                        <p className="text-sm">No new notifications</p>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-        </div>
 
-        {/* User Menu */}
-        <div className="relative">
-          <div 
-            onClick={() => setShowUserMenu(!showUserMenu)} 
-            className="flex items-center gap-3 pl-2 sm:pl-4 sm:border-l border-slate-200 dark:border-slate-700 cursor-pointer group"
-          >
-            <div className="hidden md:block text-right">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 group-hover:text-primary transition-colors">{user?.name}</p>
-              <p className="text-xs text-slate-500">Premium Plan</p>
+          {/* Dropdown */}
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-48 card shadow-modal py-1 z-50">
+              <button
+                onClick={() => { navigate('/profile'); setDropdownOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-card-hover transition-colors"
+              >
+                <User size={15} /> Profile
+              </button>
+              <button
+                onClick={() => { navigate('/settings'); setDropdownOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-card-hover transition-colors"
+              >
+                <Settings size={15} /> Settings
+              </button>
+              <div className="border-t border-border-default my-1" />
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+              >
+                <LogOut size={15} /> Logout
+              </button>
             </div>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white font-bold shadow-md ring-2 ring-white dark:ring-slate-800 group-hover:shadow-glow transition-all">
-              {user?.name?.charAt(0).toUpperCase()}
-            </div>
-          </div>
-
-          <AnimatePresence>
-            {showUserMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
-                <motion.div 
-                  initial={{ opacity: 0, y: 10, scale: 0.95 }} 
-                  animate={{ opacity: 1, y: 0, scale: 1 }} 
-                  exit={{ opacity: 0, scale: 0.95 }} 
-                  className="absolute right-0 mt-3 w-56 glass-card p-2 z-20 shadow-2xl border border-white/20 dark:border-slate-700/50 rounded-2xl"
-                >
-                  <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 mb-2">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{user?.name}</p>
-                    <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-                  </div>
-                  <Link to="/profile" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-colors">
-                    <User size={16} /> My Profile
-                  </Link>
-                  <Link to="/settings" onClick={() => setShowUserMenu(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/50 rounded-xl transition-colors">
-                    <Settings size={16} /> Settings
-                  </Link>
-                  <div className="h-px bg-slate-100 dark:bg-slate-700/50 my-2"></div>
-                  <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-danger hover:bg-danger/10 rounded-xl transition-colors font-medium">
-                    <LogOut size={16} /> Logout
-                  </button>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+          )}
         </div>
       </div>
     </header>

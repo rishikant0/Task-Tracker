@@ -16,8 +16,23 @@ const notificationSchema = new mongoose.Schema(
       required: true,
     },
     type: {
-      type: String, 
-      enum: ['info', 'warning', 'success', 'error', 'mention', 'assign', 'invite', 'comment', 'deadline'],
+      type: String,
+      enum: [
+        'info',
+        'warning',
+        'success',
+        'error',
+        'mention',
+        'assign',
+        'invite',
+        'comment',
+        'deadline',
+        'welcome',
+        'task_created',
+        'task_updated',
+        'task_completed',
+        'task_deleted'
+      ],
       default: 'info',
     },
     link: {

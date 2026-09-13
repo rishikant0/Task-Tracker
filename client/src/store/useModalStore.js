@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 
+// Modal store for create/edit task modal
 const useModalStore = create((set) => ({
   isOpen: false,
-  task: null, // null for create, object for edit
-  openModal: (task = null) => set({ isOpen: true, task }),
-  closeModal: () => set({ isOpen: false, task: null }),
+  taskToEdit: null, // null = create mode, task object = edit mode
+
+  openModal: (task = null) => set({ isOpen: true, taskToEdit: task }),
+  closeModal: () => set({ isOpen: false, taskToEdit: null }),
 }));
 
 export default useModalStore;
